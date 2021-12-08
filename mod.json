@@ -1,0 +1,18 @@
+
+{
+    "_QPVersion": "0.1.1",
+    "name": "Blq's QOLs",
+    "id": "blqQOLs",
+    "author": "BlqzingIce",
+    "version": "0.1.0",
+    "packageId": "com.beatgames.beatsaber",
+    "packageVersion": "1.17.1",
+    "description": "assorted togglable quality of life changes",
+    "coverImage": "cover.jpg",
+    "modFiles": [
+        "libblqQOLs.so"
+    ],
+    "libraryFiles": [
+        "libbeatsaber-hook_2_3_2.so"
+    ]
+}
