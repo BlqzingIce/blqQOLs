@@ -3,8 +3,8 @@
 #include "pp.hpp"
 
 #include "questui/shared/QuestUI.hpp"
-#include "questui/shared/BeatSaberUI.hpp"
-#include "config-utils/shared/config-utils.hpp"
+#include "custom-types/shared/register.hpp"
+#include "ui/FlowCoordinator.hpp"
 
 #include "TMPro/TextMeshProUGUI.hpp"
 #include <iomanip>
@@ -24,14 +24,50 @@
 
 MAKE_HOOK_MATCH(AdjustControllerTransform, &GlobalNamespace::OculusVRHelper::AdjustControllerTransform, void, GlobalNamespace::OculusVRHelper* self, UnityEngine::XR::XRNode node, UnityEngine::Transform* transform, UnityEngine::Vector3 position, UnityEngine::Vector3 rotation) 
 {
-    if(getconfig().rotfix.GetValue())
-    { 
+    if(getconfig().useSettings.GetValue())
+    {
+        if(node == UnityEngine::XR::XRNode::RightHand)
+        {
+            position.x = (float)getconfig().xPosR.GetValue()/100;
+            position.y = (float)getconfig().yPosR.GetValue()/100;
+            position.z = (float)getconfig().zPosR.GetValue()/100;
+            rotation.x = getconfig().xRotR.GetValue();
+            rotation.y = getconfig().yRotR.GetValue();
+            rotation.z = getconfig().zRotR.GetValue();
+        }
         if(node == UnityEngine::XR::XRNode::LeftHand) 
         {
-            rotation.z = -rotation.z;
+            position.x = (float)getconfig().xPosL.GetValue()/100;
+            position.y = (float)getconfig().yPosL.GetValue()/100;
+            position.z = (float)getconfig().zPosL.GetValue()/100;
+            rotation.x = getconfig().xRotL.GetValue();
+            rotation.y = getconfig().yRotL.GetValue();
+            rotation.z = getconfig().zRotL.GetValue();
         }
     }
+
+    if(!getconfig().oculusAdjustment.GetValue())
+    {
+        position.z -= 0.055;
+        rotation.x += 40;
+    }
+
+    if(!getconfig().useSettings.GetValue())
+    {
+        if(node == UnityEngine::XR::XRNode::LeftHand) {rotation.z = -rotation.z;}
+    }
+
     AdjustControllerTransform(self, node, transform, position, rotation);
+    
+    if(getconfig().customOrder.GetValue())
+    { 
+        transform->Translate(UnityEngine::Vector3(-position.x, -position.y, -position.z));
+        transform->Rotate(UnityEngine::Vector3(-rotation.x, -rotation.y, -rotation.z));
+
+        transform->Rotate(UnityEngine::Vector3(0, 0, rotation.z));
+        transform->Translate(position);
+        transform->Rotate(UnityEngine::Vector3(rotation.x, rotation.y, 0));
+    }
 }
 
 Array<TMPro::TextMeshProUGUI*>* levelStatsComponents;
@@ -55,6 +91,9 @@ MAKE_HOOK_MATCH(ShowStats, &GlobalNamespace::LevelStatsView::ShowStats, void, Gl
     maxRawScore = GlobalNamespace::ScoreModel::MaxRawScoreForNumberOfNotes(difficultyBeatmap->get_beatmapData()->get_cuttableNotesCount());
     highscore = (playerData->GetPlayerLevelStatsData(difficultyBeatmap))->get_highScore();
     songID = to_utf8(csstrtostr((playerData->GetPlayerLevelStatsData(difficultyBeatmap))->get_levelID()));
+
+    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[2]->get_text())).c_str());
+    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[4]->get_text())).c_str());
 
     if(getconfig().changeScore.GetValue())
     { 
@@ -83,6 +122,8 @@ MAKE_HOOK_MATCH(ShowStats, &GlobalNamespace::LevelStatsView::ShowStats, void, Gl
             }
         }
     }
+    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[2]->get_text())).c_str());
+    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[4]->get_text())).c_str());
 }
 
 MAKE_HOOK_MATCH(AppStart, &GlobalNamespace::QuestAppInit::AppStartAndMultiSceneEditorSetup, void, GlobalNamespace::QuestAppInit* self)
@@ -122,34 +163,12 @@ extern "C" void setup(ModInfo& info) {
     getLogger().info("Completed setup!");
 }
 
-void DidActivate(HMUI::ViewController* self, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling){
-    if(firstActivation) 
-    {
-        UnityEngine::GameObject* container = QuestUI::BeatSaberUI::CreateScrollableSettingsContainer(self->get_transform());
-
-        UnityEngine::UI::Toggle* rotfix = AddConfigValueToggle(container->get_transform(), getconfig().rotfix);
-        QuestUI::BeatSaberUI::AddHoverHint(rotfix->get_gameObject(), "Correctly mirrors the z rotation to the left controller");
-
-        UnityEngine::UI::Toggle* changeScore = AddConfigValueToggle(container->get_transform(), getconfig().changeScore);
-        QuestUI::BeatSaberUI::AddHoverHint(changeScore->get_gameObject(), "Displays best percentage instead of best score");
-
-        QuestUI::IncrementSetting* percentPrecision = AddConfigValueIncrementInt(container->get_transform(), getconfig().percentPrecision, 1, 0, 4);
-        QuestUI::BeatSaberUI::AddHoverHint(percentPrecision->get_gameObject(), "Changes decimal precision for percent, ex: 1 = 93.3%, 2 = 93.28%");
-
-        UnityEngine::UI::Toggle* changeRank = AddConfigValueToggle(container->get_transform(), getconfig().changeRank);
-        QuestUI::BeatSaberUI::AddHoverHint(changeRank->get_gameObject(), "Displays pp value of highest score instead of rank");
-
-        QuestUI::IncrementSetting* ppPrecision = AddConfigValueIncrementInt(container->get_transform(), getconfig().ppPrecision, 1, 0, 4);
-        QuestUI::BeatSaberUI::AddHoverHint(ppPrecision->get_gameObject(), "Changes decimal precision for PP, standard is 2");
-    }
-}
-
 // Called later on in the game loading - a good time to install function hooks
 extern "C" void load() {
     il2cpp_functions::Init();
-
+    custom_types::Register::AutoRegister();
     QuestUI::Init();
-    QuestUI::Register::RegisterModSettingsViewController(modInfo, DidActivate);
+    QuestUI::Register::RegisterMainMenuModSettingsFlowCoordinator<blqQOLs::FlowCoordinator*>(modInfo);
 
     getLogger().info("Installing hooks...");
     INSTALL_HOOK(getLogger(), AdjustControllerTransform);

@@ -1,16 +1,20 @@
 #include "pp.hpp"
 
-float ppCurve[17][2] = {
+const int PP_ARRAY_LENGTH = 19;
+
+float ppCurve[PP_ARRAY_LENGTH][2] = {
     {0.0f, 0.0f},
     {0.45f, 0.015f},
     {0.5f, 0.03f},
     {0.55f, 0.06f},
     {0.6f, 0.105f},
-    {0.65f, 0.16f},
-    {0.68f, 0.24f},
-    {0.7f, 0.285f},
-    {0.8f, 0.5f},
-    {0.9f, 0.75f},
+    {0.65f, 0.15f},
+    {0.7f, 0.22f},
+    {0.75f, 0.3f},
+    {0.8f, 0.42f},
+    {0.86f, 0.6f},
+    {0.9f, 0.78f},
+    {0.925f, 0.905f},
     {0.945f, 1.015f},
     {0.95f, 1.046f},
     {0.96f, 1.115f},
@@ -20,7 +24,7 @@ float ppCurve[17][2] = {
     {1.0f, 1.5f}
 };
 
-float ppCurveSlopes[16];
+float ppCurveSlopes[PP_ARRAY_LENGTH - 1];
 
 void ppIntialize()
 {
@@ -30,7 +34,7 @@ void ppIntialize()
         classof(DownloadCompleteDelegate), (void*)nullptr, HandleWebRequestCompleted
     ));
 
-    for(auto i = 0; i < 16; i++) 
+    for(auto i = 0; i < PP_ARRAY_LENGTH - 1; i++) 
     {
         auto x1 = ppCurve[i][0];
         auto y1 = ppCurve[i][1];
@@ -64,12 +68,12 @@ void HandleWebRequestCompleted() {
 }
 
 float RatioOfMaxPP(float accuracy) {
-    if (accuracy >= 1.14) return 1.25f;
+    if (accuracy >= 1.0f) return 1.5f;
     if (accuracy <= 0.0f) return 0.0f;
 
     int i = 0;
-    for (; i < 17; i++)
-        if (i == 16 || ppCurve[i + 1][0] > accuracy) break;
+    for (; i < PP_ARRAY_LENGTH; i++)
+        if (i == PP_ARRAY_LENGTH - 1 || ppCurve[i + 1][0] > accuracy) break;
 
     auto accuracyFloor = ppCurve[i][0];
     auto ppFloor = ppCurve[i][1];
