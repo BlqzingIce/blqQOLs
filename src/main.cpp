@@ -7,6 +7,7 @@
 #include "ui/FlowCoordinator.hpp"
 
 #include "TMPro/TextMeshProUGUI.hpp"
+#include "Polyglot/LocalizedTextMeshProUGUI.hpp"
 #include <iomanip>
 #include <sstream>
 
@@ -92,12 +93,12 @@ MAKE_HOOK_MATCH(ShowStats, &GlobalNamespace::LevelStatsView::ShowStats, void, Gl
     highscore = (playerData->GetPlayerLevelStatsData(difficultyBeatmap))->get_highScore();
     songID = to_utf8(csstrtostr((playerData->GetPlayerLevelStatsData(difficultyBeatmap))->get_levelID()));
 
-    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[2]->get_text())).c_str());
-    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[4]->get_text())).c_str());
-
     if(getconfig().changeScore.GetValue())
     { 
-        (*levelStatsComponents)[2]->set_text(il2cpp_utils::newcsstr("Percent"));
+        Polyglot::LocalizedTextMeshProUGUI* localizer = (*levelStatsComponents)[2]->GetComponent<Polyglot::LocalizedTextMeshProUGUI*>();
+        if (localizer) UnityEngine::Object::Destroy(localizer);
+        TMPro::TextMeshProUGUI* textMesh = (*levelStatsComponents)[2]->GetComponent<TMPro::TextMeshProUGUI*>();
+        if(textMesh) textMesh->set_text(il2cpp_utils::newcsstr("Percent"));
         if(highscore > 0)
         {
             newString = createString(getconfig().percentPrecision.GetValue(), highscore / maxRawScore * 100);
@@ -107,7 +108,10 @@ MAKE_HOOK_MATCH(ShowStats, &GlobalNamespace::LevelStatsView::ShowStats, void, Gl
 
     if(getconfig().changeRank.GetValue())
     { 
-        (*levelStatsComponents)[4]->set_text(il2cpp_utils::newcsstr("PP Earned"));
+        Polyglot::LocalizedTextMeshProUGUI* localizer = (*levelStatsComponents)[4]->GetComponent<Polyglot::LocalizedTextMeshProUGUI*>();
+        if(localizer) UnityEngine::Object::Destroy(localizer);
+        TMPro::TextMeshProUGUI* textMesh = (*levelStatsComponents)[4]->GetComponent<TMPro::TextMeshProUGUI*>();
+        if(textMesh) textMesh->set_text(il2cpp_utils::newcsstr("PP Earned"));
         if(highscore > 0)
         {
             maxPP = BeatmapMaxPP(songID, difficultyBeatmap->get_difficulty());
@@ -122,8 +126,6 @@ MAKE_HOOK_MATCH(ShowStats, &GlobalNamespace::LevelStatsView::ShowStats, void, Gl
             }
         }
     }
-    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[2]->get_text())).c_str());
-    getLogger().info("%s", to_utf8(csstrtostr((*levelStatsComponents)[4]->get_text())).c_str());
 }
 
 MAKE_HOOK_MATCH(AppStart, &GlobalNamespace::QuestAppInit::AppStartAndMultiSceneEditorSetup, void, GlobalNamespace::QuestAppInit* self)
